@@ -1,10 +1,11 @@
 # ========================================================
-# HEISENBURG STREAMER - HYPER-STREAM v6.9 (FINAL)
+# HEISENBURG STREAMER - HYPER-STREAM v7.0 (FINAL)
 # ========================================================
 
-# Self Elevation
+# Self Elevation (Simplified for irm | iex)
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Start-Process PowerShell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"Start-Process PowerShell -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File `"$($MyInvocation.MyCommand.Path)`"' -Verb RunAs`"" -Verb RunAs
+    $PSCommand = "-NoProfile -ExecutionPolicy Bypass -Command `"Start-Process PowerShell -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File `"" + $MyInvocation.MyCommand.Path + "`"' -Verb RunAs`""
+    Start-Process PowerShell -ArgumentList $PSCommand -Verb RunAs
     exit
 }
 
